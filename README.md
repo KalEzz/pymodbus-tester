@@ -18,7 +18,7 @@ PyModbus Tester is a desktop application built with PySide and pymodbus for test
 ---
 
 ## 🏗️ Project Structure
-
+```
 pymodbus-tester/
 │
 ├── icons/
@@ -39,7 +39,7 @@ pymodbus-tester/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
-
+```
 
 ---
 
