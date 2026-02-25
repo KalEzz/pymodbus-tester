@@ -24,8 +24,23 @@ pymodbus-tester/
 ├── icons/
 ├── images/
 ├── modbus/
+│   ├── clients.py
+│   ├── decoder.py
+│   ├── errors.py
+│   ├── poll_result.py
+│   ├── poller.py
+│   └── runtime.py
+│
 ├── models/
+│   ├── device.py
+│   ├── program_settings.py
+│   └── registers.py
+│
 ├── ui/
+│   ├── base_window.py
+│   ├── config_window.py
+│   ├── console_window.py
+│   └── main_window.py
 │
 ├── config/
 │   └── config_manager.py
@@ -77,12 +92,12 @@ python main.py
 
 ## 📌 Roadmap
 
-- Improve async Modbus runtime
-- Device auto-reconnect
-- Logging system
-- Export register data in CSV
-- Executable for run application
-- Installer build
+- []Improve async Modbus runtime
+- []Device auto-reconnect
+- []Logging system
+- []Export register data in CSV
+- []Executable for run application
+- []Installer build
 
 ---
 
