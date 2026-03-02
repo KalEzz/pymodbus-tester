@@ -4,6 +4,8 @@ from typing import Optional
 
 @dataclass
 class PollResult:
-    reg: object
-    value: Optional[float]
-    error: Optional[str] = None
+    def __init__(self, device, reg, value=None, error=None):
+        self.device = device
+        self.reg = reg
+        self.value = value
+        self.error = error

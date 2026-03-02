@@ -11,7 +11,7 @@ from ui.base_window import BaseWindow
 
 class ConfigWindow(BaseWindow):
     def __init__(self, program_settings: ProgramSettings):
-        super().__init__(600, 300, "Configurações de Leitura")
+        super().__init__(400, 300, "Configurações de Leitura")
 
         # Instancias
         self.configs_frame = None
@@ -27,16 +27,15 @@ class ConfigWindow(BaseWindow):
         self.configs_frame.setObjectName("BgWindowFrame")
 
         self.configs_frame_layout = QVBoxLayout(self.configs_frame)
-        self.configs_frame_layout.setContentsMargins(0, 0, 0, 0)
-        self.configs_frame_layout.addStretch()
+        self.configs_frame_layout.setContentsMargins(20, 0, 0, 0)
         self.configs_frame_layout.setSpacing(20)
 
         self.window_layout.addWidget(self.configs_frame)
 
         # Mapeamento
         fields = {
-            "Máx. leituras por arquivo": "max_read_per_file",
-            "Intervalo de leitura (s)": "intervalo_de_leitura",
+            "Máx. Leituras Por Arquivo": "max_read_per_file",
+            "Intervalo de Leitura (s)": "intervalo_de_leitura",
             "Timeout (ms)": "timeout",
         }
 
@@ -542,16 +541,29 @@ class RegisterConfigWindow(BaseWindow):
         self.configs_frame_layout.addWidget(page, alignment=Qt.AlignLeft)
 
     def save(self):
-        for attr_name,entry in self.entry_list.items():
-            if attr_name in self.option_menu_fields:
-                setattr(self.registro, attr_name, entry.currentText())
-            else:
-                setattr(self.registro, attr_name, entry.text())
+        try:
+            for attr_name, entry in self.entry_list.items():
+                if attr_name in self.option_menu_fields:
+                    setattr(self.registro, attr_name, entry.currentText())
+                else:
+                    setattr(self.registro, attr_name, entry.text())
 
-        if self.modo == "novo":
-            self.device.add_register(self.registro)
-        else:
-            self.device.update_register(self.registro)
+            #Add ou faz um update nos registros, e se existir repetidos, add em skipped para exibir posteriormente
+            if self.modo == "novo":
+                skipped = self.device.add_register(self.registro)
+            else:
+                skipped = self.device.update_register(self.registro)
+
+            if skipped:
+                QMessageBox.warning(
+                    self,
+                    "Registros Duplicados Detectados",
+                    f"Os seguintes endereços já existiam e foram ignorados:\n{', '.join(skipped)}"
+                )
+
+        except Exception as e:
+            print("Erro ao salvar:", e)
+            # aqui você pode mostrar QMessageBox
 
     def closeWindow(self):
         self.save()

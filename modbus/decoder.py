@@ -17,27 +17,6 @@ class Decoder:
         """
         return self._apply_pipeline(reg, raw)
 
-    def decode_block(self, reg, raw_block: bytes):
-        """
-        Decodifica um bloco de dados retornando uma lista de valores.
-        Cada valor corresponde a um "registro lógico".
-        """
-        results = []
-
-        size = reg.size  # tamanho do dado lógico (em bytes)
-
-        if len(raw_block) % size != 0:
-            raise ValueError(
-                f"Bloco inválido: {len(raw_block)} bytes não múltiplo de {size}"
-            )
-
-        for offset in range(0, len(raw_block), size):
-            raw_slice = raw_block[offset: offset + size]
-            value = self._apply_pipeline(reg, raw_slice)
-            results.append(value)
-
-        return results
-
     # =========================
     # Pipeline interno
     # =========================

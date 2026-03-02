@@ -1,52 +1,76 @@
 import asyncio
+import time
 from PySide6.QtCore import QObject, Signal
-from modbus.errors import (
-    ModbusTimeoutError,
-    ModbusConnectionError,
-)
 
 
 class ModbusRuntime(QObject):
-    value_updated = Signal(object, object)
+
+    value_updated = Signal(object, object)  # device, PollResult
     device_state_changed = Signal(object, str)
     error_occurred = Signal(object, str)
 
+    STOPPED = "STOPPED"
+    CONNECTING = "CONNECTING"
+    RECONNECTING = "RECONNECTING"
+    OFFLINE = "OFFLINE"
+    DISABLED = "DISABLED"
+
     def __init__(self, devices, poller, client_manager, interval=1.0):
         super().__init__()
+
         self.devices = devices
         self.poller = poller
         self.client_manager = client_manager
         self.interval = interval
 
         self._running = False
-        self._task: asyncio.Task | None = None
+        self._task = None
 
-        self.device_states = {d: "STOPPED" for d in devices}
-        self.failure_count = {d: 0 for d in devices}
-        self.max_failures_before_reconnect = 5
+        #  Controle de falhas
+        self.max_failures = 5
+        self.reconnect_delay = 3  # segundos
 
-    # -------------------------
-    # Estado por device
-    # -------------------------
+        self.device_states = {
+            d.dev_id: self.STOPPED for d in devices.values()
+        }
+
+        self.failure_count = {
+            d.dev_id: 0 for d in devices.values()
+        }
+
+        self.last_reconnect_attempt = {
+            d.dev_id: 0 for d in devices.values()
+        }
+
+    # --------------------------------------------------
+    # ESTADO
+    # --------------------------------------------------
 
     def _set_state(self, device, state, error=None):
-        if self.device_states.get(device) != state:
-            self.device_states[device] = state
+        dev_id = device.dev_id
+        current = self.device_states.get(dev_id)
+
+        if current != state:
+            self.device_states[dev_id] = state
             self.device_state_changed.emit(device, state)
-            print(f"Device {device.dev_id} - {device.nome}: {state}")
+            print(f"Device {dev_id} - {device.nome}: {state}")
 
         if error:
             self.error_occurred.emit(device, error)
 
-    # -------------------------
-    # API pública
-    # -------------------------
+    # --------------------------------------------------
+    # API
+    # --------------------------------------------------
 
     def start(self):
         if self._running:
             return
 
         self._running = True
+
+        for device in self.devices.values():
+            self._set_state(device, self.CONNECTING)
+
         loop = asyncio.get_running_loop()
         self._task = loop.create_task(self._run())
 
@@ -60,139 +84,188 @@ class ModbusRuntime(QObject):
             self._task = None
 
         await self.client_manager.close_all()
+
+        for device in self.devices.values():
+            self._set_state(device, self.STOPPED)
+
         print("Leitura Encerrada")
 
-
-    def update_context(self, devices, interval, timeout):
-        """
-        Atualiza completamente o contexto de leitura.
-        Deve ser chamado SEMPRE com o runtime parado.
-        """
-
-        if self._running:
-            raise RuntimeError("Não pode atualizar contexto com runtime rodando")
-
-        print("[RUNTIME] Atualizando contexto...")
-
-        self.devices = devices
-        self.interval = interval
-
-        # Atualiza timeout do ClientManager
-        self.client_manager.timeout = timeout
-
-        # Força recriação de clients
-        self.client_manager.clients.clear()
-        self.client_manager.device_map.clear()
-
-        # Reset estados e contadores
-        self.device_states = {d: "STOPPED" for d in devices}
-        self.failure_count = {d: 0 for d in devices}
-
-        print("[RUNTIME] Contexto atualizado")
-
-    # -------------------------
-    # Loop principal
-    # -------------------------
+    # --------------------------------------------------
+    # LOOP
+    # --------------------------------------------------
 
     async def _run(self):
         try:
             while self._running:
-                print(f"[RUNTIME] Novo Ciclo de Leitura - {len(self.devices)} Devices no Ciclo")
+
+                print(f"[RUNTIME] Novo Ciclo - {len(self.devices)} Devices")
 
                 tasks = [
                     self._poll_device(device)
                     for device in self.devices.values()
                 ]
 
-                await asyncio.gather(*tasks, return_exceptions=True)
+                await asyncio.gather(*tasks)
                 await asyncio.sleep(self.interval)
 
         except asyncio.CancelledError:
             pass
 
-    # -------------------------
-    # Poll individual
-    # -------------------------
+    # --------------------------------------------------
+    # POLL
+    # --------------------------------------------------
 
     async def _poll_device(self, device):
-        if device.enabled == "True":
-            print(f"[RUNTIME] entrando no poll do Device {device.dev_id} {device.nome}")
 
-            try:
-                print(f"[RUNTIME] - Device {device.dev_id} - Pedindo Client")
-                client = await self.client_manager.get_client(device)
+        dev_id = device.dev_id
+        state = self.device_states[dev_id]
 
-                if not client.connected:
-                    raise ModbusConnectionError("Client não conectado")
+        print(f"\n[RUNTIME] --- DEVICE {dev_id} ---")
+        print(f"[RUNTIME] Estado atual: {state}")
+        print(f"[RUNTIME] Falhas atuais: {self.failure_count[dev_id]}")
 
-                print(f"[RUNTIME] - Device {device.dev_id} - Client OK")
+        # --------------------------------------------------
+        # OFFLINE → aguarda cooldown
+        # --------------------------------------------------
+        if state == self.OFFLINE:
 
-                results = await self.poller.poll_device(device, client)
+            now = time.time()
+            offline_time = now - self.last_reconnect_attempt[dev_id]
 
-                has_timeout = False
-                has_connection_error = False
+            print(f"[RUNTIME] Está OFFLINE há {offline_time:.2f}s")
+            print(f"[RUNTIME] reconnect_delay = {self.reconnect_delay}s")
 
-                for result in results:
+            if offline_time < self.reconnect_delay:
+                print("[RUNTIME] Ainda em cooldown, não vai tentar conectar.")
+                return
 
-                    if result.error:
+            print("[RUNTIME] Cooldown terminou → vai tentar conectar novamente")
 
-                        if isinstance(result.error, ModbusTimeoutError):
-                            has_timeout = True
-
-                        elif isinstance(result.error, ModbusConnectionError):
-                            has_connection_error = True
-
-                        else:
-                            print(f"[ERRO] - Device {device.dev_id} Registro: {result.error}")
-                            self.error_occurred.emit(device, str(result.error))
-
-                        continue
-
-                    # sucesso
-                    self.failure_count[device] = 0
-                    result.reg.last_value = result.value
-                    self.value_updated.emit(result.reg, result.value)
-
-                # -------- Tratamento de estados --------
-
-                if has_connection_error:
-                    print(f"[ERRO][_POLL] - Device {device.dev_id}: Erro de conexão")
-                    raise ModbusConnectionError("Erro de conexão detectado")
-
-                if has_timeout:
-                    self.failure_count[device] += 1
-                    print(f"[RUNTIME] Device {device.dev_id} Timeout ({self.failure_count[device]})")
-                    self._set_state(device, "OFFLINE")
-
-                    if self.failure_count[device] >= self.max_failures_before_reconnect:
-                        print(f"[RUNTIME] Device {device.dev_id} excedeu limite de falhas. Tentando reconnect.")
-                        await self._try_reconnect(device)
-
-                else:
-                    self._set_state(device, "RUNNING")
-
-            except ModbusConnectionError as e:
-                print(f"[ERRO][_POLL] - Device {device.dev_id}: {e}")
-                await self._try_reconnect(device)
-
-            except Exception as e:
-                print(f"[ERRO][_POLL][UNEXPECTED] - Device {device.dev_id}: {e}")
-                self._set_state(device, "ERROR", str(e))
-        else:
-            print(f"[RUNTIME] Device {device.dev_id} {device.nome} - Desabilitado")
-    # -------------------------
-    # Reconnect
-    # -------------------------
-
-    async def _try_reconnect(self, device):
-        self._set_state(device, "RECONNECTING")
+            self.last_reconnect_attempt[dev_id] = now
+            self.failure_count[dev_id] = 0
 
         try:
-            await self.client_manager.reconnect(device)
-            self.failure_count[device] = 0
-            print(f"[RUNTIME] Device {device.dev_id} Reconnect OK")
-            self._set_state(device, "RUNNING")
+
+            # Sempre que for tentar comunicação
+            if self.device_states[dev_id] != self.RUNNING:
+                print("[RUNTIME] Mudando estado para CONNECTING")
+                self._set_state(device, self.CONNECTING)
+
+            print("[RUNTIME] Chamando get_client()")
+            client = await self.client_manager.get_client(device)
+
+            print("[RUNTIME] Chamando poll_device()")
+            results = await self.poller.poll_device(device, client)
+
+            if not results:
+                raise ConnectionError("Nenhuma resposta do dispositivo")
+
+            success = False
+
+            for result in results:
+
+                reg = result.reg
+
+                if result.error:
+                    print(f"[RUNTIME] Registrador erro: {result.error}")
+                    reg.last_error = result.error
+                    reg.last_value = None
+
+                elif result.value is None:
+                    print("[RUNTIME] Registrador sem resposta")
+                    reg.last_error = "Sem resposta"
+                    reg.last_value = None
+
+                else:
+                    print(f"[RUNTIME] Registrador OK → {result.value}")
+                    reg.last_error = None
+                    reg.last_value = result.value
+                    success = True
+
+                self.value_updated.emit(device, result)
+
+            if not success:
+                raise ConnectionError("Nenhum registrador respondeu")
+
+            # -------------------------
+            # SUCESSO REAL
+            # -------------------------
+            print("[RUNTIME] Comunicação OK → RUNNING")
+
+            self.failure_count[dev_id] = 0
+            self._set_state(device, self.RUNNING)
 
         except Exception as e:
-            print(f"[ERRO][try_reconnect] - Device {device.dev_id}: {e}")
-            self._set_state(device, "ERROR", str(e))
+
+            self.failure_count[dev_id] += 1
+
+            print(f"[RUNTIME] ERRO CAPTURADO: {e}")
+            print(f"[RUNTIME] Falhas agora: {self.failure_count[dev_id]}")
+            print(f"[RUNTIME] max_failures: {self.max_failures}")
+
+            if self.failure_count[dev_id] < self.max_failures:
+                print("[RUNTIME] Ainda não atingiu limite → permanece CONNECTING")
+                self._set_state(device, self.CONNECTING, str(e))
+                return
+
+            # Estourou limite
+            print("[RUNTIME] LIMITE ATINGIDO → indo para OFFLINE")
+
+            self._set_state(device, self.OFFLINE, str(e))
+            self.last_reconnect_attempt[dev_id] = time.time()
+
+            print("[RUNTIME] Chamando disconnect()")
+            await self.client_manager.disconnect(device)
+
+    # --------------------------------------------------
+    # UPDATE CONTEXT
+    # --------------------------------------------------
+
+    def update_context(self, devices, interval, timeout):
+        """
+        Atualiza completamente o contexto de leitura.
+        O runtime DEVE estar parado antes de chamar.
+        """
+
+        if self._running:
+            raise RuntimeError(
+                "Não pode atualizar contexto com runtime rodando"
+            )
+
+        print("[RUNTIME] Atualizando contexto...")
+
+        # Atualiza referências principais
+        self.devices = devices
+        self.interval = interval
+
+        # Atualiza timeout do ClientManager
+        self.client_manager.timeout = timeout
+
+        #  Fecha qualquer client antigo por segurança
+        # (caso alguém tenha chamado fora da ordem)
+        try:
+            asyncio.create_task(self.client_manager.close_all())
+        except RuntimeError:
+            # caso não exista loop ativo
+            pass
+
+        #  Limpa caches internos do ClientManager
+        self.client_manager.clients.clear()
+        self.client_manager.device_map.clear()
+
+        #  Reseta estados
+        self.device_states = {
+            d.dev_id: self.STOPPED for d in devices.values()
+        }
+
+        #  Reseta contadores de falha
+        self.failure_count = {
+            d.dev_id: 0 for d in devices.values()
+        }
+
+        #  Reseta controle de reconnect
+        self.last_reconnect_attempt = {
+            d.dev_id: 0 for d in devices.values()
+        }
+
+        print("[RUNTIME] Contexto atualizado")

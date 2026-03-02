@@ -74,6 +74,9 @@ def custom_theme(
     QPushButton#RemoveDeviceButton:hover {{
         background-color: #c44;
     }}  
+    QPushButton#RemoveDeviceButton:pressed {{
+        background-color: #c0392b;
+    }}
        
      
     QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {{
@@ -127,6 +130,11 @@ def custom_theme(
         background-color: {bg_color};
         border: 1px solid #444;
         border-radius: 6px;
+    }}
+    QFrame#LineFrame{{
+        background-color: #3A3A3A;
+        margin-left: 5px;
+        margin-right: 5px;
     }}
     QFrame#BgWindowFrame{{
         background-color: {bg_color2};

@@ -1,6 +1,11 @@
+import asyncio
+import copy
+
 from PySide6.QtCore import Signal, QObject
+from PySide6.QtWidgets import QMessageBox
 from pymodbus.client import AsyncModbusTcpClient, AsyncModbusSerialClient
 
+from core.utils import parse_address_ranges
 from models.registers import RegisterConfig
 
 class Device(QObject):
@@ -35,21 +40,86 @@ class Device(QObject):
         if not isinstance(registro, RegisterConfig):
             raise TypeError("registro precisa ser RegisterConfig")
 
-        # Exemplo de regra: endereço duplicado
+        start, qty = parse_address_ranges(registro.endereco)
+
+        skipped = []
+        added_any = False
+
+        if qty == 1:
+            if self._exists(registro.endereco, registro.funcao):
+                skipped.append(registro.endereco)
+            else:
+                self.registros.append(registro)
+                added_any = True
+
+        else:
+            for offset in range(qty):
+                addr = str(start + offset)
+
+                if self._exists(addr, registro.funcao):
+                    skipped.append(addr)
+                    continue
+
+                new_reg = copy.deepcopy(registro)
+                new_reg.endereco = addr
+
+                self.registros.append(new_reg)
+                added_any = True
+
+        if added_any:
+            self.registers_changed.emit()
+
+        return skipped
+
+    def _exists(self, endereco, funcao):
+        for reg in self.registros:
+            if reg.endereco == endereco and reg.funcao == funcao:
+                return True
+        return False
+
+    def _add_single_register(self, registro):
+        # regra de duplicidade
         for reg in self.registros:
             if reg.endereco == registro.endereco and reg.funcao == registro.funcao:
                 raise ValueError("Já existe registro com esse endereço e função")
 
         self.registros.append(registro)
-        self.registers_changed.emit()
-
-    def update_register(self, reg: RegisterConfig):
-
-        self.registers_changed.emit()
 
     def remove_register(self, reg: RegisterConfig):
         if reg in self.registros:
             self.registros.remove(reg)
+            self.registers_changed.emit()
+
+    def update_register(self, reg: RegisterConfig):
+
+        # Verifica se o registro está na lista
+        if reg not in self.registros:
+            raise ValueError("Registro não encontrado no device")
+
+        # Se endereço virou faixa (ex: 5-7)
+        if "-" in str(reg.endereco):
+
+            # Remove o registro atual
+            self.registros.remove(reg)
+
+            # Reinsere usando add_register (expande corretamente)
+            try:
+                self.add_register(reg)
+            except Exception as e:
+                # Se falhar, restaura original
+                self.registros.append(reg)
+                raise e
+
+        else:
+            # Valida duplicidade simples
+            for other in self.registros:
+                if (
+                        other is not reg and
+                        other.endereco == reg.endereco and
+                        other.funcao == reg.funcao
+                ):
+                    raise ValueError("Já existe registro com esse endereço e função")
+
             self.registers_changed.emit()
 
     def clear_registers(self):
@@ -74,7 +144,11 @@ class Device(QObject):
                 timeout=timeout
             )
 
-        await client.connect()
+        # 🔥 TIMEOUT NO CONNECT
+        try:
+            await asyncio.wait_for(client.connect(), timeout=timeout + 0.5)
+        except asyncio.TimeoutError:
+            raise ConnectionError("Timeout ao abrir porta serial")
 
         if not client.connected:
             raise ConnectionError(f"Falha ao conectar {self.nome}")

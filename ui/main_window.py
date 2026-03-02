@@ -11,6 +11,8 @@ from ui.config_window import DeviceConfigWindow, ConfigWindow
 from ui.console_window import ConsoleWindow
 
 from core.utils import *
+from ui.device_monitor_window import DeviceMonitorWindow
+
 
 class App(QWidget):
     def __init__(self, runtime):
@@ -49,7 +51,7 @@ class App(QWidget):
         self.program_version_label = None
 
         self.setWindowTitle("PyModbus Tester")
-        self.window_size = QRect(0, 0, 600, 600)
+        self.window_size = QRect(0, 0, 900, 600)
         self.maximizado = True
         QTimer.singleShot(0, self.showMaximized)
         theme = custom_theme()
@@ -125,7 +127,7 @@ class App(QWidget):
         self.config_button = self.create_button(self.config_button, container1_layout,
                                                 icon_path="icons/config.svg", tooltip="Configurações")
 
-        self.folder_button.clicked.connect(lambda: open_directory('/Desktop/LeiturasMicTeste'))
+        self.folder_button.clicked.connect(lambda: open_directory('/Desktop/LeiturasPyModbusTester'))
         self.config_button.clicked.connect(self.open_configWindow)
 
         self.start_button.clicked.connect(self.start_read)
@@ -224,7 +226,7 @@ class App(QWidget):
 
         frame = QFrame()
         frame.setObjectName("DeviceWidgetFrame")
-        frame.setFixedSize(150, 170)
+        frame.setFixedSize(150, 200)
 
         layout = QVBoxLayout(frame)
 
@@ -250,11 +252,43 @@ class App(QWidget):
             lambda _, d=device: self.open_deviceConfigWindow(d)
         )
 
-        btn_del = QPushButton("Remover")
-        btn_del.setObjectName("RemoveDeviceButton")
-        layout.addWidget(btn_del)
+        line = QFrame()
+        line.setFixedHeight(2)
+        line.setObjectName("LineFrame")
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(line)
 
+        btn_frame = QFrame()
+        btn_frame_layout = QHBoxLayout(btn_frame)
+        btn_frame_layout.setSpacing(10)
+        layout.addWidget(btn_frame)
+
+        btn_frame_layout.addStretch()
+
+        btn_openDeviceMonitorWindow = self.create_button(
+            None, btn_frame_layout,
+            icon_path="icons/glass_icon.svg",
+            icon_h=25, icon_w=25,
+            tooltip="Visualizar Registros",
+            btn_h=30, btn_w=30,
+            btn_alignment=Qt.AlignCenter
+        )
+        btn_openDeviceMonitorWindow.setObjectName("ViewRegistersButton")
+        btn_openDeviceMonitorWindow.clicked.connect(lambda _, d=dev_id: self.open_deviceMonitorWindow(self.devices[d]))
+
+        btn_del = self.create_button(
+            None, btn_frame_layout,
+            icon_path="icons/delete.svg",
+            icon_h=25, icon_w=25,
+            tooltip="Remover Device",
+            btn_h=30, btn_w=30,
+            btn_alignment=Qt.AlignCenter
+        )
+        btn_del.setObjectName("RemoveDeviceButton")
         btn_del.clicked.connect(lambda _, d=dev_id: self.remove_device(d))
+
+        btn_frame_layout.addStretch()
 
         return frame
 
@@ -365,6 +399,10 @@ class App(QWidget):
 
         save_devices(self.devices)
         self.render_devices()
+
+    def open_deviceMonitorWindow(self, device):
+        self.device_monitor_window = DeviceMonitorWindow(device, self.runtime)
+        self.device_monitor_window.exec()
 
     def open_consoleWindow(self):
         self.console_window = None

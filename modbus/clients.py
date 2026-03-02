@@ -7,44 +7,47 @@ class ClientManager:
     async def get_client(self, device):
         key = self._make_key(device)
 
-        if key not in self.clients:
+        client = self.clients.get(key)
+
+        # Se não existe → cria
+        if client is None:
+            print("[CLIENT MANAGER] Criando novo client")
             client = await device.create_client(self.timeout)
-
-            if not client.connected:
-                await client.connect()
-
             self.clients[key] = client
 
-        self.device_map[device] = key
-        return self.clients[key]
+        # Se existe mas não conectado → reconecta
+        if not getattr(client, "connected", False):
+            print("[CLIENT MANAGER] Client desconectado → conectando")
+            await client.connect()
 
-    async def reconnect(self, device):
+            if not getattr(client, "connected", False):
+                raise ConnectionError("Falha ao conectar")
+
+        self.device_map[device] = key
+        return client
+
+    async def disconnect(self, device):
         key = self.device_map.get(device)
 
         if not key:
-            raise ConnectionError("Device não registrado")
+            return
 
-        client = self.clients[key]
+        client = self.clients.get(key)
 
-        try:
-            client.close()
-        except:
-            pass
+        if client:
+            try:
+                print("[CLIENT MANAGER] Fechando client")
+                client.close()
+            except Exception as e:
+                print("[CLIENT MANAGER] Erro ao fechar:", e)
 
-        await client.connect()
-
-        if not client.connected:
-            raise ConnectionError("Reconnect falhou")
+        # Remove completamente
+        self.clients.pop(key, None)
+        self.device_map.pop(device, None)
 
     async def close_all(self):
-        for client in self.clients.values():
-            try:
-                client.close()
-            except:
-                pass
-
-        self.clients.clear()
-        self.device_map.clear()
+        for device in list(self.device_map.keys()):
+            await self.disconnect(device)
 
     def _make_key(self, device):
         if device.tipo_conexao == "tcp":
