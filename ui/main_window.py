@@ -12,6 +12,7 @@ from ui.console_window import ConsoleWindow
 
 from core.utils import *
 from ui.device_monitor_window import DeviceMonitorWindow
+from widgets.status_indicator import StatusIndicator
 
 
 class App(QWidget):
@@ -19,7 +20,7 @@ class App(QWidget):
         super().__init__()
         self.runtime = runtime
 
-        self.program_version = '0.1.0'
+        self.program_version = '0.2.0'
 
         #Criação da Pasta de Leitura
         create_directory('/Desktop/LeiturasPyModbusTester')
@@ -56,6 +57,9 @@ class App(QWidget):
         QTimer.singleShot(0, self.showMaximized)
         theme = custom_theme()
         self.setStyleSheet(theme)
+
+        self.device_status_indicators = {}  # Dicionario para guardar o Status Indicator de cada Device
+        self.runtime.device_state_changed.connect(self.update_device_status)
 
         # Remove bordas e barra de título
         self.setWindowFlags(Qt.FramelessWindowHint)
@@ -189,7 +193,6 @@ class App(QWidget):
         self.devices_grid.setVerticalSpacing(15)
         self.scroll_device_frame.setWidget(self.device_grid_content)
 
-
         self.render_devices()
 
     def render_devices(self):
@@ -230,9 +233,20 @@ class App(QWidget):
 
         layout = QVBoxLayout(frame)
 
+        header_frame = QFrame()
+        header_frame_layout = QHBoxLayout(header_frame)
+        header_frame_layout.setSpacing(0)
+        header_frame_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(header_frame)
+
+        status_indicator = StatusIndicator()
+        header_frame_layout.addWidget(status_indicator)
+        self.device_status_indicators[dev_id] = status_indicator
+
         num_lbl = QLabel(f"Device {dev_id}")
-        num_lbl.setAlignment(Qt.AlignCenter)
-        layout.addWidget(num_lbl)
+        header_frame_layout.addWidget(num_lbl, alignment=Qt.AlignCenter)
+
+        #layout.addWidget(num_lbl)
 
         if device.nome:
             name_lbl = QLabel(device.nome)
@@ -311,6 +325,13 @@ class App(QWidget):
 
         save_devices(self.devices)
         self.render_devices()
+
+    def update_device_status(self, device, status):
+        indicator = self.device_status_indicators.get(device.dev_id)
+
+        if indicator:
+            indicator.set_status(status)
+            indicator.set_tooltip(status)
 
     def create_bottom_toolbar(self):
         self.bottom_toolbar = QFrame()

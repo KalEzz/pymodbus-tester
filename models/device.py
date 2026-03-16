@@ -36,6 +36,12 @@ class Device(QObject):
         self.endereco = "1"
         self.registros: list[RegisterConfig] = []
 
+    def get_register(self, endereco):
+        for reg in self.registros:
+            if str(reg.endereco) == str(endereco):
+                return reg
+        return None
+
     def add_register(self, registro: RegisterConfig):
         if not isinstance(registro, RegisterConfig):
             raise TypeError("registro precisa ser RegisterConfig")

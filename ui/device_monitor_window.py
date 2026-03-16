@@ -8,9 +8,9 @@ from ui.base_window import BaseWindow
 
 class DeviceMonitorWindow(BaseWindow):
     def __init__(self, device: Device, runtime):
-        super().__init__(900, 300, f"Monitor de Registros - Device {device.dev_id}")
+        super().__init__(900, 700, f"Monitor de Registros - Device {device.dev_id}")
 
-        self.device = device
+        self.device = runtime.devices[device.dev_id]
         self.runtime = runtime
 
         # Cria os campos
@@ -81,16 +81,16 @@ class DeviceMonitorWindow(BaseWindow):
         # Runtime updates
         # -------------------------
 
-    def on_value_updated(self, device, result):
+    def on_value_updated(self, device, reg_addr):
         print("UI recebeu update")
         # Garantia de identidade correta
-        if device is not self.device:
+        if device.dev_id != self.device.dev_id:
             return
 
-        reg = result.reg
+        reg_addr = int(reg_addr)
 
-        # Atualiza somente essa linha
-        self.model.update_register(reg)
+        self.model.update_register(reg_addr)
+        self.table.viewport().update()
 
     def on_device_state_changed(self, device, state):
         print("UI recebeu estado:", device.dev_id, state)
@@ -112,7 +112,7 @@ class DeviceMonitorWindow(BaseWindow):
         elif state == "OFFLINE":
             self.state_label.setStyleSheet("color: #ffcc00; font-weight: bold;")
 
-        elif state == "RECONNECTING":
+        elif state == "CONNECTING":
             self.state_label.setStyleSheet("color: #00bfff; font-weight: bold;")
 
         elif state == "ERROR":
@@ -149,12 +149,15 @@ class DeviceRegisterTableModel(QAbstractTableModel):
 
     def __init__(self, device, runtime):
         super().__init__()
-        self.device = device
-        self.registers = list(device.registros)
-        self.runtime = runtime
 
-        # Mapa rápido para achar linha em O(1)
-        self.row_map = {reg.endereco: i for i, reg in enumerate(self.registers)}
+        self.device = device
+        self.runtime = runtime
+        self.registers = list(device.registros)
+
+        self._row_map = {
+            reg.endereco: i
+            for i, reg in enumerate(self.registers)
+        }
 
     # -------------------------
     # Qt obrigatório
@@ -181,9 +184,6 @@ class DeviceRegisterTableModel(QAbstractTableModel):
 
         reg = self.registers[index.row()]
         col = index.column()
-        # -------- CheckBoxDisabled --------
-        if role == Qt.CheckStateRole:
-            return None
 
         # -------- Texto --------
         if role == Qt.DisplayRole:
@@ -197,17 +197,12 @@ class DeviceRegisterTableModel(QAbstractTableModel):
             elif col == 3:
                 return reg.datatype
             elif col == 4:
-
-                state = self.runtime.device_states.get(self.device.dev_id)
-
-                if state in ("OFFLINE", "STOPPED"):
-                    return "—"
-
-                if state == "CONNECTING" and reg.last_value is not None:
-                    return f"{reg.last_value} (stale)"
-
+                print("VALUE DEBUG:", reg.endereco, reg.last_value)
                 if reg.last_error:
                     return f"Erro: {reg.last_error}"
+
+                if reg.last_value is None:
+                    return "—"
 
                 return reg.last_value
             elif col == 5:
@@ -234,24 +229,18 @@ class DeviceRegisterTableModel(QAbstractTableModel):
 
                 return "OK"
 
-        # -------- Cor de fundo --------
-        elif col == 7:
+        if role == Qt.BackgroundRole and col == 7:
 
             state = self.runtime.device_states.get(self.device.dev_id)
 
             if state == "OFFLINE":
-                return "OFFLINE"
-
-            if state == "CONNECTING":
-                return "CONNECTING"
+                return QColor("#3a1f1f")
 
             if reg.last_error:
-                return "ERROR"
+                return QColor("#4a1f1f")
 
-            if reg.last_value is None:
-                return "-"
-
-            return "OK"
+            if reg.last_value is not None:
+                return QColor("#1f3a1f")
 
         # -------- Cor do texto --------
         if role == Qt.ForegroundRole:
@@ -264,16 +253,18 @@ class DeviceRegisterTableModel(QAbstractTableModel):
     # Atualização por registro
     # -------------------------
 
-    def update_register(self, reg):
-        row = self.row_map.get(reg.endereco)
+    def update_register(self, address):
+
+        row = self._row_map.get(address)
+
         if row is None:
             return
 
-        left = self.index(row, 0)
-        right = self.index(row, self.columnCount() - 1)
+        top_left = self.index(row, 4)
+        bottom_right = self.index(row, 7)
 
-        self.dataChanged.emit(left, right, [
-            Qt.DisplayRole,
-            Qt.BackgroundRole,
-            Qt.ForegroundRole
-        ])
+        self.dataChanged.emit(
+            top_left,
+            bottom_right,
+            [Qt.DisplayRole, Qt.BackgroundRole]
+        )

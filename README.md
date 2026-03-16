@@ -2,7 +2,7 @@
 
 PyModbus Tester is a desktop application built with PySide and pymodbus for testing, monitoring, and managing Modbus devices (RTU and TCP).
 
-> ⚠️ Project under development – current version: v0.1.0
+> ⚠️ Project under development – current version: v0.2.0
 
 ---
 
@@ -10,7 +10,7 @@ PyModbus Tester is a desktop application built with PySide and pymodbus for test
 
 - Support for Modbus RTU and TCP
 - Real-time register polling
-- Holding and Input register visualization
+- Real-time Holding and Input register visualization
 - Device configuration interface
 - Organized tree view for registers
 - Modular architecture 
@@ -40,8 +40,12 @@ pymodbus-tester/
 │   ├── base_window.py
 │   ├── config_window.py
 │   ├── console_window.py
+│   ├── device_monitor_window.py
 │   └── main_window.py
-│
+│ 
+├── widgets/
+│   └── status_indicator.py
+│ 
 ├── config/
 │   └── config_manager.py
 │

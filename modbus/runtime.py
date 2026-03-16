@@ -1,17 +1,18 @@
 import asyncio
 import time
+from datetime import datetime
+
 from PySide6.QtCore import QObject, Signal
 
 
 class ModbusRuntime(QObject):
-
-    value_updated = Signal(object, object)  # device, PollResult
+    value_updated = Signal(object, int)  # device, endereco do registro
     device_state_changed = Signal(object, str)
     error_occurred = Signal(object, str)
 
     STOPPED = "STOPPED"
     CONNECTING = "CONNECTING"
-    RECONNECTING = "RECONNECTING"
+    RUNNING = "RUNNING"
     OFFLINE = "OFFLINE"
     DISABLED = "DISABLED"
 
@@ -100,10 +101,16 @@ class ModbusRuntime(QObject):
 
                 print(f"[RUNTIME] Novo Ciclo - {len(self.devices)} Devices")
 
-                tasks = [
-                    self._poll_device(device)
-                    for device in self.devices.values()
-                ]
+                tasks = []
+
+                for device in self.devices.values():
+
+                    if device.enabled == "True":
+                        tasks.append(self._poll_device(device))
+
+                    else:
+                        if self.device_states[device.dev_id] != self.DISABLED:
+                            self._set_state(device, self.DISABLED)
 
                 await asyncio.gather(*tasks)
                 await asyncio.sleep(self.interval)
@@ -180,9 +187,10 @@ class ModbusRuntime(QObject):
                     print(f"[RUNTIME] Registrador OK → {result.value}")
                     reg.last_error = None
                     reg.last_value = result.value
+                    reg.last_timestamp = datetime.now()
                     success = True
 
-                self.value_updated.emit(device, result)
+                self.value_updated.emit(device, int(reg.endereco))
 
             if not success:
                 raise ConnectionError("Nenhum registrador respondeu")
