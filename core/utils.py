@@ -54,3 +54,7 @@ def colored_icon(path, color, icon_h=25, icon_w=25):
     painter.end()
 
     return QIcon(pixmap)
+
+def resource_path(*paths):
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(BASE_DIR, *paths)

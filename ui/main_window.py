@@ -20,10 +20,12 @@ class App(QWidget):
         super().__init__()
         self.runtime = runtime
 
-        self.program_version = '0.2.0'
+        self.program_version = '0.2.1'
 
         #Criação da Pasta de Leitura
         create_directory('/Desktop/LeiturasPyModbusTester')
+
+        #self.BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
         #Carrega as Configurações do Programa
         self.program_settings = load_program_settings()
@@ -106,7 +108,7 @@ class App(QWidget):
 
         self.mic_logo_label = QLabel()
         self.mic_logo_label.setPixmap(
-            QPixmap("icons/logo.svg").scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            QPixmap(resource_path("icons", "logo.svg")).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         container3_layout.addWidget(self.mic_logo_label)
 
         self.top_toolbar_layout.addStretch(1)
@@ -119,17 +121,24 @@ class App(QWidget):
         container1_layout.setSpacing(15)
         self.top_toolbar_layout.addWidget(container1, alignment=Qt.AlignLeft)
 
-        self.start_button = self.create_button(self.start_button, container1_layout, icon_path="icons/start.svg",
-                                               icon_h=25, icon_w=25, tooltip="Começar Leitura", icon_color="#66cc67")
+        self.start_button = self.create_button(self.start_button, container1_layout,
+                                               icon_path=resource_path("icons", "start.svg"),
+                                               icon_h=25, icon_w=25,
+                                               tooltip="Começar Leitura",
+                                               icon_color="#66cc67")
 
-        self.stop_button = self.create_button(self.stop_button, container1_layout, icon_path="icons/stop.svg",
-                                              icon_h=20, icon_w=20, tooltip="Parar Leitura")
+        self.stop_button = self.create_button(self.stop_button, container1_layout,
+                                              icon_path=resource_path("icons", "stop.svg"),
+                                              icon_h=20, icon_w=20,
+                                              tooltip="Parar Leitura")
 
         self.folder_button = self.create_button(self.folder_button, container1_layout,
-                                                icon_path="icons/folder.svg", tooltip="Logs de Leitura")
+                                                icon_path=resource_path("icons", "folder.svg"),
+                                                tooltip="Logs de Leitura")
 
         self.config_button = self.create_button(self.config_button, container1_layout,
-                                                icon_path="icons/config.svg", tooltip="Configurações")
+                                                icon_path=resource_path("icons", "config.svg"),
+                                                tooltip="Configurações")
 
         self.folder_button.clicked.connect(lambda: open_directory('/Desktop/LeiturasPyModbusTester'))
         self.config_button.clicked.connect(self.open_configWindow)
@@ -216,7 +225,7 @@ class App(QWidget):
 
         self.add_device_btn = QPushButton()
         self.add_device_btn.setFixedSize(150, 60)
-        self.add_device_btn.setIcon(QIcon("icons/add-device1.svg"))
+        self.add_device_btn.setIcon(QIcon(resource_path("icons", "add_device1.svg")))
         self.add_device_btn.setIconSize(QSize(50, 50))
         self.add_device_btn.setToolTip("Adicionar Dispositivo")
 
@@ -255,7 +264,7 @@ class App(QWidget):
 
         device_config_btn = self.create_button(
             None, layout,
-            icon_path="images/device_icon.png",
+            icon_path=resource_path("images", "device_icon.png"),
             icon_h=60, icon_w=60,
             tooltip="Configurações do Device",
             btn_h=60, btn_w=60,
@@ -282,7 +291,7 @@ class App(QWidget):
 
         btn_openDeviceMonitorWindow = self.create_button(
             None, btn_frame_layout,
-            icon_path="icons/glass_icon.svg",
+            icon_path=resource_path("icons", "glass_icon.svg"),
             icon_h=25, icon_w=25,
             tooltip="Visualizar Registros",
             btn_h=30, btn_w=30,
@@ -293,7 +302,7 @@ class App(QWidget):
 
         btn_del = self.create_button(
             None, btn_frame_layout,
-            icon_path="icons/delete.svg",
+            icon_path=resource_path("icons", "delete.svg"),
             icon_h=25, icon_w=25,
             tooltip="Remover Device",
             btn_h=30, btn_w=30,
@@ -348,7 +357,7 @@ class App(QWidget):
         self.bottom_toolbar_layout.addWidget(container1, alignment=Qt.AlignRight)
 
         self.console_button = self.create_button(None, container1_layout,
-                                                 icon_path="icons/console.svg",
+                                                 icon_path=resource_path("icons", "console.svg"),
                                                  tooltip="Console",
                                                  btn_alignment=Qt.AlignRight)
         self.console_button.clicked.connect(self.open_consoleWindow)
@@ -372,7 +381,6 @@ class App(QWidget):
         if button is None:
             button = QPushButton(label)
         button.setFixedSize(btn_h, btn_w)
-        #button.setIcon(colored_icon(icon_path, icon_color, icon_h, icon_w))
         button.setIcon(QIcon(icon_path))
         button.setIconSize(QSize(icon_h, icon_w))
         if tooltip:

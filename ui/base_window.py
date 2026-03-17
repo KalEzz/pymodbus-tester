@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout, QGraphicsDropShadowEffect, Q
     QPushButton
 
 from core.custom_theme import custom_theme
+from core.utils import resource_path
 
 
 class BaseWindow(QDialog):
@@ -74,7 +75,7 @@ class BaseWindow(QDialog):
 
         self.mic_logo_label = QLabel()
         self.mic_logo_label.setPixmap(
-            QPixmap("icons/logo_icon").scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            QPixmap(resource_path("icons", "logo_icon.svg")).scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         container1_layout.addWidget(self.mic_logo_label)
 
         self.window_name_label = QLabel(self.title)

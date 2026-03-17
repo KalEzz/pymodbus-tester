@@ -3,6 +3,7 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget, QHBoxLayout, QLabel, QLineEdit, QComboBox, QStackedWidget, \
     QTreeView, QMessageBox
 
+from core.utils import resource_path
 from models.device import Device
 from models.program_settings import ProgramSettings
 from models.registers import RegisterConfig
@@ -308,17 +309,20 @@ class DeviceConfigWindow(BaseWindow):
 
         self.tree_buttons_layout.addStretch()
 
-        self.add_reg_btn = self.create_button(None, self.tree_buttons_layout, icon_path="icons/add-device.svg",
+        self.add_reg_btn = self.create_button(None, self.tree_buttons_layout,
+                                              icon_path=resource_path("icons", "add_device.svg"),
                                               icon_h=25, icon_w=25, tooltip="Adicionar Registro",
                                               btn_alignment=Qt.AlignRight)
         self.add_reg_btn.clicked.connect(self.openAddRegisterWindow)
 
-        self.remove_reg_btn = self.create_button(None, self.tree_buttons_layout, icon_path="icons/delete.svg",
+        self.remove_reg_btn = self.create_button(None, self.tree_buttons_layout,
+                                                 icon_path=resource_path("icons", "delete.svg"),
                                                  icon_h=25, icon_w=25, tooltip="Remover Registro",
                                                  btn_alignment=Qt.AlignRight)
         self.remove_reg_btn.clicked.connect(self.on_remove_register)
 
-        self.edit_reg_btn = self.create_button(None, self.tree_buttons_layout, icon_path="icons/edit.svg",
+        self.edit_reg_btn = self.create_button(None, self.tree_buttons_layout,
+                                               icon_path=resource_path("icons", "edit.svg"),
                                                icon_h=25, icon_w=25, tooltip="Editar Registro",
                                                btn_alignment=Qt.AlignRight)
         self.edit_reg_btn.clicked.connect(self.on_edit_register)
