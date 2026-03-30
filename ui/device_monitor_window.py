@@ -77,9 +77,14 @@ class DeviceMonitorWindow(BaseWindow):
             Qt.QueuedConnection
         )
 
+        self.device.registers_changed.connect(self.on_registers_changed)
+
         # -------------------------
         # Runtime updates
         # -------------------------
+
+    def on_registers_changed(self):
+        self.model.refresh()
 
     def on_value_updated(self, device, reg_addr):
         print("UI recebeu update")
@@ -152,7 +157,7 @@ class DeviceRegisterTableModel(QAbstractTableModel):
 
         self.device = device
         self.runtime = runtime
-        self.registers = list(device.registros)
+        self.registers = device.registros
 
         self._row_map = {
             reg.endereco: i
@@ -268,3 +273,15 @@ class DeviceRegisterTableModel(QAbstractTableModel):
             bottom_right,
             [Qt.DisplayRole, Qt.BackgroundRole]
         )
+
+    def refresh(self):
+        self.beginResetModel()
+
+        self.registers = self.device.registros
+
+        self._row_map = {
+            reg.endereco: i
+            for i, reg in enumerate(self.registers)
+        }
+
+        self.endResetModel()

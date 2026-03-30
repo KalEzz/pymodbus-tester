@@ -20,7 +20,7 @@ class App(QWidget):
         super().__init__()
         self.runtime = runtime
 
-        self.program_version = '0.2.1'
+        self.program_version = '0.2.2'
 
         #Criação da Pasta de Leitura
         create_directory('/Desktop/LeiturasPyModbusTester')
@@ -29,7 +29,7 @@ class App(QWidget):
 
         #Carrega as Configurações do Programa
         self.program_settings = load_program_settings()
-        self.devices = load_devices()
+        self.devices = self.runtime.devices
 
         # Instância dos Frames Principais
         self.top_toolbar = None
@@ -447,10 +447,9 @@ class App(QWidget):
         self.stop_button.setEnabled(True)
 
         settings = load_program_settings()
-        devices = load_devices()
 
         self.runtime.update_context(
-            devices=devices,
+            devices=self.devices,
             interval=settings.intervalo_de_leitura,
             timeout=settings.timeout
         )
