@@ -9,21 +9,19 @@ class ClientManager:
 
         client = self.clients.get(key)
 
-        # Se não existe → cria
         if client is None:
             print("[CLIENT MANAGER] Criando novo client")
             client = await device.create_client(self.timeout)
             self.clients[key] = client
 
-        # Se existe mas não conectado → reconecta
-        if not getattr(client, "connected", False):
-            print("[CLIENT MANAGER] Client desconectado → conectando")
-            await client.connect()
+        print("[CLIENT MANAGER] Conectando client...")
 
-            if not getattr(client, "connected", False):
-                raise ConnectionError("Falha ao conectar")
+        connected = await client.connect()
 
-        self.device_map[device] = key
+        if not connected:
+            raise ConnectionError("Falha ao conectar")
+
+        self.device_map[device.dev_id] = key
         return client
 
     async def disconnect(self, device):

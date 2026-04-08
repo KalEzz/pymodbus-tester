@@ -42,6 +42,9 @@ def parse_address_ranges(text: str) -> tuple[int, int]:
 
     return int(text), 1
 
+def parse_bool(value):
+    return str(value).strip().lower() == "true"
+
 def colored_icon(path, color, icon_h=25, icon_w=25):
     renderer = QSvgRenderer(path)
     pixmap = QPixmap(QSize(icon_h, icon_w))

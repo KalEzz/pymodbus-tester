@@ -6,7 +6,7 @@ class RegisterConfig:
 
         # Modbus
         self.funcao: str = "holding"
-        self.endereco: str | None = None
+        self.endereco: str = ""
         self.quantidade: int = 1
         self.modo_leitura: str = "AUTO"
 

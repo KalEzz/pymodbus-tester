@@ -4,6 +4,8 @@ import asyncio
 from PySide6.QtWidgets import QApplication
 from qasync import QEventLoop
 
+from logger.connect_outputs import connect_outputs
+
 from ui.main_window import App
 
 from modbus.runtime import ModbusRuntime
@@ -48,6 +50,11 @@ def main():
         client_manager=client_manager,
         interval=settings.intervalo_de_leitura
     )
+
+    # =============================
+    # Logger
+    # =============================
+    #connect_outputs(runtime, devices)
 
     # =============================
     # UI

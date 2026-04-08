@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QTableVi
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
 from PySide6.QtGui import QColor
 
+from modbus.reading import Reading
 from models.device import Device
 from ui.base_window import BaseWindow
 
@@ -85,7 +86,7 @@ class DeviceMonitorWindow(BaseWindow):
 
     def on_registers_changed(self):
         self.model.refresh()
-
+    ''''
     def on_value_updated(self, device, reg_addr):
         print("UI recebeu update")
         # Garantia de identidade correta
@@ -93,6 +94,18 @@ class DeviceMonitorWindow(BaseWindow):
             return
 
         reg_addr = int(reg_addr)
+
+        self.model.update_register(reg_addr)
+        self.table.viewport().update()
+    '''
+
+    def on_value_updated(self, reading: Reading):
+        print("UI recebeu update")
+        # Garantia de identidade correta
+        if reading.device_id != self.device.dev_id:
+            return
+
+        reg_addr = int(reading.address)
 
         self.model.update_register(reg_addr)
         self.table.viewport().update()

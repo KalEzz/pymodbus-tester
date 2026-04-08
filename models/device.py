@@ -22,6 +22,7 @@ class Device(QObject):
 
         #Controle
         self.enabled: str = "True"
+        self.log_enabled: str = "True"
 
         #TCP
         self.ip = ""
@@ -168,6 +169,7 @@ class Device(QObject):
             "nome": self.nome,
             "ip": self.ip,
             "enabled": self.enabled,
+            "log_enabled": self.log_enabled,
             "porta": self.porta,
             "porta_com": self.porta_com,
             "baudrate": self.baudrate,
@@ -187,6 +189,7 @@ class Device(QObject):
         dev.nome = data.get("nome", "")
         dev.ip = data.get("ip", "")
         dev.enabled = data.get("enabled", "True")
+        dev.log_enabled = data.get("log_enabled", "True")
         dev.porta = data.get("porta", "502")
         dev.porta_com = data.get("porta_com", "COM6")
         dev.baudrate = data.get("baudrate", "9600")

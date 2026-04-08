@@ -155,9 +155,10 @@ class DeviceConfigWindow(BaseWindow):
             "Endereço IP": "ip",
             "Porta": "porta",
             "Endereço do Device": "endereco",
-            "Habilitado": "enabled"
+            "Habilitado": "enabled",
+            "Habilitar Log": "log_enabled"
         }
-        option_menu_fields = ["enabled"]
+        option_menu_fields = ["enabled", "log_enabled"]
 
         for label_text, attr_name in fields.items():
             container = QWidget()
@@ -178,7 +179,7 @@ class DeviceConfigWindow(BaseWindow):
             if attr_name in option_menu_fields:
                 entry = QComboBox()
 
-                if attr_name == "enabled":
+                if attr_name == "enabled" or "log_enabled":
                     opcoes = ["True", "False"]
                     entry.addItems(opcoes)
 
@@ -215,9 +216,10 @@ class DeviceConfigWindow(BaseWindow):
             "Bits de Parada": "bits_parada",
             "Tamanho do Byte": "tamanho_byte",
             "Endereço do Device": "endereco",
-            "Habilitado": "enabled"
+            "Habilitado": "enabled",
+            "Habilitar Log": "log_enabled"
         }
-        option_menu_fields = ["baudrate", "paridade", "enabled"]
+        option_menu_fields = ["baudrate", "paridade", "enabled", "log_enabled"]
 
         for label_text, attr_name in fields.items():
             container = QWidget()
@@ -245,7 +247,7 @@ class DeviceConfigWindow(BaseWindow):
                     opcoes = ["N", "E", "O"]
                     entry.addItems(opcoes)
 
-                elif attr_name == "enabled":
+                elif attr_name == "enabled" or "log_enabled":
                     opcoes = ["True", "False"]
                     entry.addItems(opcoes)
 

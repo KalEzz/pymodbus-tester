@@ -4,9 +4,13 @@ from datetime import datetime
 
 from PySide6.QtCore import QObject, Signal
 
+from modbus.poll_result import PollResult
+from modbus.reading import Reading
+
 
 class ModbusRuntime(QObject):
-    value_updated = Signal(object, int)  # device, endereco do registro
+    #value_updated = Signal(object, int)  # device, endereco do registro
+    value_updated = Signal(object) #PollResult
     device_state_changed = Signal(object, str)
     error_occurred = Signal(object, str)
 
@@ -190,7 +194,18 @@ class ModbusRuntime(QObject):
                     reg.last_timestamp = datetime.now()
                     success = True
 
-                self.value_updated.emit(device, int(reg.endereco))
+                reading = Reading(
+                    device_id=device.dev_id,
+                    device_name=device.nome,
+                    register_name=reg.nome,
+                    address=reg.endereco,
+                    value=reg.last_value,
+                    timestamp=reg.last_timestamp,
+                    error=reg.last_error,
+                )
+
+                #self.value_updated.emit(device, int(reg.endereco))
+                self.value_updated.emit(reading)
 
             if not success:
                 raise ConnectionError("Nenhum registrador respondeu")

@@ -203,16 +203,32 @@ class ModbusPoller:
         tipo = reg.funcao.lower()
 
         if tipo == "holding":
-            return await client.read_holding_registers(start, qty, slave)
+            return await client.read_holding_registers(
+                address=start,
+                count=qty,
+                device_id=slave
+            )
 
         elif tipo == "input":
-            return await client.read_input_registers(start, qty, slave)
+            return await client.read_input_registers(
+                address=start,
+                count=qty,
+                device_id=slave
+            )
 
         elif tipo == "coil":
-            return await client.read_coils(start, qty, slave)
+            return await client.read_coils(
+                address=start,
+                count=qty,
+                device_id=slave
+            )
 
         elif tipo == "discrete":
-            return await client.read_discrete_inputs(start, qty, slave)
+            return await client.read_discrete_inputs(
+                address=start,
+                count=qty,
+                device_id=slave
+            )
 
         else:
             raise ModbusRegisterError(f"Função inválida: {reg.funcao}")

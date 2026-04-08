@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, QPoint, QEvent, QRect, QTimer
 from core.custom_theme import custom_theme
 
 from config.config_manager import load_program_settings, load_devices, save_devices, save_program_settings
+from logger.logging_manager import LoggingManager
 from models.device import Device
 from ui.config_window import DeviceConfigWindow, ConfigWindow
 from ui.console_window import ConsoleWindow
@@ -20,7 +21,7 @@ class App(QWidget):
         super().__init__()
         self.runtime = runtime
 
-        self.program_version = '0.2.2'
+        self.program_version = '0.3.0'
 
         #Criação da Pasta de Leitura
         create_directory('/Desktop/LeiturasPyModbusTester')
@@ -454,13 +455,19 @@ class App(QWidget):
             timeout=settings.timeout
         )
 
+        self.logging_manager = LoggingManager(self.runtime, self.devices)\
+
         self.runtime.start()
+        self.logging_manager.start()
+
+
 
     def stop_read(self):
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
 
         asyncio.create_task(self.runtime.stop())
+        self.logging_manager.stop()
 
     # ------Fechamento App--------
 
